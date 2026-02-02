@@ -213,8 +213,9 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     # 核心路径与模型参数
     parser.add_argument('--weights', nargs='+', type=str,
-                        default='../yolov9-pan-strawberry7cls_rackcls1_v2.pt')
-    parser.add_argument('--source', type=str, default='0', help='file/dir/URL/glob/screen/0(webcam)')
+                        # default='../yolov9-pan-strawberry7cls_rackcls1_v2.pt')
+                        default='../yolov9-pan-strawberry7cls_rackcls1_v3_0.pt')
+    parser.add_argument('--source', type=str, default='2', help='file/dir/URL/glob/screen/0(webcam)')  # left: 2 right: 6
     parser.add_argument('--data', type=str, default='../data/rack-v2.yaml')
     parser.add_argument('--imgsz', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.8, help='confidence threshold')
