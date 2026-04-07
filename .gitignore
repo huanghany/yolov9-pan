@@ -14,3 +14,7 @@ runs
 dangkang_picking_msgs
 
 .idea
+
+*.bag
+
+*.pyc
