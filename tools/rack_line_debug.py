@@ -39,6 +39,7 @@ except ImportError:
     ROS_MOVEVIEW_MSG_AVAILABLE = False
     moveview_return = None
 
+from utils.segment.general import masks2segments, process_mask
 from tools.rack_line_utils import (
     Annotator,
     DetectMultiBackend,
@@ -71,6 +72,19 @@ FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
+
+
+def get_class_color_by_name(class_name: str, fallback_color):
+    """按类别名称返回固定 BGR 颜色；未知类别回退到默认颜色。"""
+    class_color_map = {
+        "Unripe": (0, 200, 0),      # 绿
+        "Ripe2": (0, 255, 180),     # 黄绿
+        "Ripe4": (0, 255, 255),     # 黄
+        "Ripe7": (0, 165, 255),     # 橙
+        "Ripe": (0, 0, 255),        # 红
+        "Disease": (180, 0, 180),   # 紫
+    }
+    return class_color_map.get(class_name, fallback_color)
 
 
 @smart_inference_mode()
@@ -175,9 +189,7 @@ def run(
         f"save_video={save_video}, show_window={show_window}, ros_publish={ros_publish}"
     )
 
-    # 语义分割的目标类别 id（替代 data/yaml 中的 stuff class 配置）。
-    # 由于当前脚本只在语义掩码/轨迹中使用单个 class，因此若传多个只取第一个。
-    stuff_id = int(classes[0]) if classes is not None and len(classes) > 0 else 7
+    stuff_id = 7  # 语义分割的目标类别 id
 
     for path, im, im0s, vid_cap, s in dataset:
         if input_mode == 1 and rospy.is_shutdown():
@@ -192,9 +204,8 @@ def run(
         if im_tensor.ndim == 3:
             im_tensor = im_tensor.unsqueeze(0)
 
-        pred, panoptic_outs = model(im_tensor, augment=False, visualize=False)
-        _, semantic_logits = panoptic_outs[2], panoptic_outs[3]
-
+        pred, panoptic_outs = model(im_tensor, augment=False, visualize=False)[:2]
+        mask_proto, semantic_logits = panoptic_outs[2], panoptic_outs[3]
         pred = non_max_suppression(
             pred,
             conf_thres=conf,
@@ -316,7 +327,6 @@ def run(
                 cv2.line(im0, (x_left, 0), (x_left, h - 1), (0, 0, 0), 1)
                 cv2.line(im0, (x_right, 0), (x_right, h - 1), (0, 0, 0), 1)
 
-            cv2.rectangle(im0, (5, 5), (420, 75), (0, 0, 0), -1)
             cv2.putText(
                 im0,
                 f"Status: {status_text}",
@@ -338,13 +348,6 @@ def run(
 
             fps_text = f"FPS: {fps:.1f}"
             fps_size = cv2.getTextSize(fps_text, cv2.FONT_HERSHEY_SIMPLEX, 1.0, 2)[0]
-            cv2.rectangle(
-                im0,
-                (w - fps_size[0] - 20, 5),
-                (w - 5, 45),
-                (0, 0, 0),
-                -1,
-            )
             cv2.putText(
                 im0,
                 fps_text,
@@ -361,12 +364,37 @@ def run(
             # det head 检测结果可视化（bbox + cls/conf）
             if show_det and det is not None and len(det):
                 annotator = Annotator(im0, line_width=2, pil=False, example=str(names))
+                det = det.clone() # 避免修改原始预测
                 det[:, :4] = scale_boxes(im_tensor.shape[2:], det[:, :4], im0.shape).round()
+                # masks = process_mask(mask_proto, det[:, 6:], det[:, :4], im0.shape[:2], upsample=True)
+                # masks_np = masks.permute(1, 2, 0).cpu().numpy()
+
+                for j, (*xyxy, conf, cls) in enumerate(reversed(det[:, :6])):
+                    c = int(cls)
+                    # mask_bool = masks_np[:, :, j] > 0.5
+                    # color_layer = np.zeros_like(im0, dtype=np.uint8)
+                    # color_layer[mask_bool] = colors(c, True)
+                    # im0 = cv2.addWeighted(im0, 1.0, color_layer, 0.3, 0)
+                    p1, p2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+                    cv2.rectangle(im0, p1, p2, colors(c, True), thickness=2)
+                    label = f'{names[c]} {conf:.2f}'
+                    w_text, h_text = cv2.getTextSize(label, 0, fontScale=1, thickness=2)[0]
+                    cv2.rectangle(im0, p1, (p1[0] + w_text, p1[1] - h_text - 3), colors(c, True), -1)
+                    cv2.putText(im0, label, (p1[0], p1[1] - 2), 0, 1, [255, 255, 255], thickness=2)
+
+
                 for *xyxy, conf_det, cls_det in det:
                     c = int(cls_det)
-                    name = names[c] if isinstance(names, (list, tuple)) and c < len(names) else str(c)
-                    label = f"{name} {float(conf_det):.2f}"
-                    annotator.box_label(xyxy, label, color=colors(c, True))
+                    if isinstance(names, dict):
+                        name = str(names.get(c, c))
+                    elif isinstance(names, (list, tuple)) and c < len(names):
+                        name = str(names[c])
+                    else:
+                        name = str(c)
+                    y_center = int((float(xyxy[1]) + float(xyxy[3])) * 0.5)
+                    label = f"{name} {float(conf_det):.2f} y:{y_center}"
+                    det_color = get_class_color_by_name(name, colors(c, True))
+                    annotator.box_label(xyxy, label, color=det_color)
                 # 写回带框图像（后续发布/保存使用）
                 im0 = annotator.im
 
@@ -430,135 +458,94 @@ def run(
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input-mode", type=int, default=0,
+        "--input-mode", type=int, default=1,
         help="输入模式: 0=普通(source)，1=ROS Topic",
     )
     parser.add_argument(
-        "--ros-topic",
-        type=str,
-        default="arm_0/perception_binocular_image_raw_pair",
+        "--ros-topic", type=str, default="arm_0/perception_binocular_image_raw_pair",
         help="ROS 图像话题名，仅在 --input-mode=1 时有效",
     )
     parser.add_argument(
-        "--crop-top",
-        type=float,
-        default=0.1,
+        "--crop-top", type=float, default=0.1,
         help="顶部裁剪比例 (0.0-1.0)，该区域的掩码将被忽略",
     )
     parser.add_argument(
-        "--crop-bottom",
-        type=float,
-        default=0.1,
+        "--crop-bottom", type=float, default=0.1,
         help="底部裁剪比例 (0.0-1.0)，该区域的掩码将被忽略",
     )
     parser.add_argument(
-        "--crop-x",
-        type=float,
-        default=0.1,
+        "--crop-x", type=float, default=0.1,
         help="左右裁剪比例 (0.0-0.5)，该区域的掩码将被忽略（左右各裁剪同等比例）",
     )
 
     parser.add_argument(
-        "--weights",
-        nargs="+",
-        type=str,
-        default='./weights/yolov9-pan-strawberry7cls_rackcls1_v4_0.pt',
+        "--weights", nargs="+", type=str, default="./weights/yolov9-pan-strawberry7cls_rackcls1_v4_0.pt",
         help="模型权重路径",
     )
     parser.add_argument(
-        "--source",
-        type=str,
-        # default="0",  # 使用摄像头
-        default="/home/hhy/Datasets/strawberry/shanxing_pick/20260306_bag_select_3/2026-03-06_16-30-36_061.jpg",  # 使用图片
+        "--source", type=str, 
+        # default="/home/hhy/Datasets/strawberry/shanxing_pick/20260306_bag_select_3/2026-03-06_16-30-36_061.jpg",
+        default="data/images/shanxing_test-20250403-150108_rack-7_left_layer-1_001360.jpg",
         help="输入源: file/dir/URL/glob/screen/0(webcam)",
     )
     parser.add_argument(
-        "--imgsz",
-        nargs="+",
-        type=int,
-        default=[640],
+        "--imgsz", nargs="+", type=int, default=[640],
         help="推理尺寸 h,w",
     )
     parser.add_argument(
-        "--conf",
-        type=float,
-        default=0.8,
+        "--conf", type=float, default=0.5,
         help="置信度阈值",
     )
     parser.add_argument(
-        "--iou",
-        type=float,
-        default=0.45,
+        "--iou", type=float, default=0.45,
         help="NMS IoU 阈值",
     )
     parser.add_argument(
-        "--ref-pos",
-        type=float,
-        default=0.3,
+        "--ref-pos", type=float, default=0.5,
         help="参考水平线高度 (0.0-1.0)",
     )
     parser.add_argument(
-        "--classes",
-        nargs="+",
-        type=int,
-        default=None,
+        "--classes", nargs="+", type=int, default=None,
         help="语义目标 stuff class id（替代 data/yaml）；传多个时只取第一个用于掩码/轨迹",
     )
     parser.add_argument(
-        "--device",
-        type=str,
-        default="",
+        "--device", type=str, default="",
         help="cuda device, 如 0 或 0,1,2,3 或 cpu",
     )
     parser.add_argument(
-        "--save-video",
-        default=False,
+        "--save-video", default=False,
         help="是否保存结果视频",
     )
     parser.add_argument(
-        "--save-path",
-        type=str,
-        default="rack_result.mp4",
+        "--save-path", type=str, default="rack_result.mp4",
         help="结果视频保存路径（当 --save-video 启用时有效）",
     )
     parser.add_argument(
-        "--show-window",
-        default=True,
+        "--show-window", default=True,
         help="是否显示可视化窗口",
     )
     parser.add_argument(
-        "--ros-publish",
-        default=True,
+        "--ros-publish", default=True,
         help="发布 moveview_return 到 ROS（需 dangkang_picking_msgs 与 roscore）",
     )
     parser.add_argument(
-        "--ros-publish-topic",
-        type=str,
-        default="arm_0/picking/moveview_return",
+        "--ros-publish-topic", type=str, default="arm_0/picking/moveview_return",
         help="moveview_return 发布话题名（默认与 public_rack_line_ros 一致）",
     )
     parser.add_argument(
-        "--ros-publish-image",
-        default=True,
+        "--ros-publish-image", default=True,
         help="在发布 moveview_return 时把结果图像填入 msg.image_out",
     )
     parser.add_argument(
-        "--show-det",
-        type=int,
-        default=1,
+        "--show-det", type=int, default=1,
         help="是否可视化 det head 的 bbox/cls/conf：1=显示，0=不显示",
     )
     parser.add_argument(
-        "--mask-area-thres",
-        type=float,
-        default=200000.0,
+        "--mask-area-thres", type=float, default=20000.0,
         help="作物架掩码面积阈值；低于该值时启用果实位置估计 y",
     )
     parser.add_argument(
-        "--small-area-strategy",
-        type=str,
-        default="fruit",
-        choices=["fruit", "lost"],
+        "--small-area-strategy", type=str, default="fruit", choices=["fruit", "lost"],
         help="小面积策略: lost=保持旧策略(直接丢失), fruit=使用果实位置估计 y",
     )
 
