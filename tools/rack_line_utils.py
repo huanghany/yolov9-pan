@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# @Author      : huanghany
+# @File        : rack_line_utils.py
+# @Create      : 2025/12/8-19:51
+# @Contact     : huanghanyang345@163.com
+# @Copyright   : Copyright (c) 2025, ZenoAI Robot Inc. All Rights Reserved.
+# @Description : 作物架线检测通用工具（YOLO/ROS 依赖与辅助函数）
+
 import time
 from typing import Optional, Tuple
 
@@ -7,10 +15,6 @@ import rosgraph
 import rospy
 import torch
 
-# ---------------------------------------------------------------------------
-# 项目内 YOLO / 工具依赖集中入口：rack_line_standalone 只 import 本文件即可与路径解耦。
-# 拷贝到独立工程时，只需在本文件内替换为等价实现或保持对 yolov9-pan 的 PYTHONPATH。
-# ---------------------------------------------------------------------------
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
 from utils.general import (

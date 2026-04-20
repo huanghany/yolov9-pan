@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 # @Author      : huanghany
-# @File        : predict_rack_online.py
-# @Description : 作物架实时推理 (支持 ROS Topic 输入、裁剪及上下边界过滤)
+# @File        : public_rack_line_ros.py
+# @Create      : 2025/12/8-19:51
+# @Contact     : huanghanyang345@163.com
+# @Copyright   : Copyright (c) 2025, ZenoAI Robot Inc. All Rights Reserved.
+# @Description : 作物架实时推理（支持 ROS Topic 输入、裁剪及上下边界过滤）
 
 import argparse
 import os
-os.environ['ROS_MASTER_URI'] = 'http://192.168.3.101:11311'
+# os.environ['ROS_MASTER_URI'] = 'http://192.168.3.101:11311'
 import sys
 from pathlib import Path
 import time
@@ -22,7 +25,7 @@ from std_msgs.msg import Header
 
 # 尝试导入自定义消息
 try:
-    from dangkang_picking_msgs_1.msg import moveview_return
+    from dangkang_picking_msgs.msg import moveview_return
     ROS_AVAILABLE = True
 except ImportError:
     print("[WARNING] ROS custom messages not found. ROS publishing will be disabled.")

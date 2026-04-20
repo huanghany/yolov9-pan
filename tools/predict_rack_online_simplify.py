@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Author      : huanghany
-# @File        : predict_rack_online.py
-# @Description : 作物架实时推理 (FPS + 红色掩码 + 面积过滤)
+# @File        : predict_rack_online_simplify.py
+# @Create      : 2025/12/8-19:51
+# @Contact     : huanghanyang345@163.com
+# @Copyright   : Copyright (c) 2025, ZenoAI Robot Inc. All Rights Reserved.
+# @Description : 作物架实时推理（简化版：FPS + 红色掩码 + 面积过滤）
 
 import argparse
 import os

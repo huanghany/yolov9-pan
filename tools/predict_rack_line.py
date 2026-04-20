@@ -4,7 +4,7 @@
 # @Create      : 2025/12/8-20:01
 # @Contact     : huanghanyang345@163.com
 # @Copyright   : Copyright (c) 2025, Huayi Robot Inc. All Rights Reserved.
-# @Description :
+# @Description : 作物架离线推理（图片/视频输入）
 import argparse
 import os
 import platform
@@ -269,10 +269,10 @@ def run(**kwargs):
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/hhy/Project/yolov9-pan/yolov9-pan-strawberry7cls_rackcls1_v2.pt')
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/hhy/Project/yolov9-pan/weights/yolov9-pan-strawberry7cls_rackcls1_v2.pt')
     # parser.add_argument('--source', type=str, default='/home/huanghanyang/Project/yolov9/data/images')
     # parser.add_argument('--source', type=str, default='/home/huanghanyang/Datasets/rack_datasets/rack_datasets_v1_coco/images/test')
-    parser.add_argument('--source', type=str, default='/home/hhy/1201/20251208-175054.jpg')
+    parser.add_argument('--source', type=str, default='/home/hhy/Project/yolov9-pan/data/images')
     # parser.add_argument('--source', type=str, default='/home/hhy/Datasets/strawberry/monit/20250321-180245_rack-10_right_layer-1_RGB.mp4')
     # parser.add_argument('--source', type=str, default='/home/huanghanyang/Datasets/rack_datasets/project-145/images_origin')
     parser.add_argument('--data', type=str, default='/home/huanghanyang/Project/yolov9/data/rack-v2.yaml')

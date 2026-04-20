@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Author      : huanghany
-# @File        : predict_rack_online.py
-# @Description : 作物架实时推理 (ROS 发布版)
+# @File        : rack_line_public.py
+# @Create      : 2025/12/8-19:51
+# @Contact     : huanghanyang345@163.com
+# @Copyright   : Copyright (c) 2025, ZenoAI Robot Inc. All Rights Reserved.
+# @Description : 作物架实时推理（ROS 发布版）
 
 import argparse
 import os
