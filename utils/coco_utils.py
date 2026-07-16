@@ -50,6 +50,12 @@ panoptic_stuff_ids = [
     0,
 ]
 
+strawberry_instances_ids = [
+    1, 2, 3, 4, 5, 6, 7]
+
+strawberry_stuff_ids = [
+    8, 0]
+
 def getCocoIds(name = 'semantic'):
     if 'instances' == name:
         return all_instances_ids
@@ -58,7 +64,8 @@ def getCocoIds(name = 'semantic'):
     elif 'panoptic' == name:
         return all_instances_ids + panoptic_stuff_ids
     else: # semantic
-        return all_instances_ids + all_stuff_ids
+        # return all_instances_ids + all_stuff_ids
+        return strawberry_instances_ids + strawberry_stuff_ids
 
 def getMappingId(index, name = 'semantic'):
     ids = getCocoIds(name = name)

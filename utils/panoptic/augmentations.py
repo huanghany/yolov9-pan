@@ -14,9 +14,23 @@ def mixup(im, labels, segments, seg_cls, semantic_masks, im2, labels2, segments2
     r = np.random.beta(32.0, 32.0)  # mixup ratio, alpha=beta=32.0
     im = (im * r + im2 * (1 - r)).astype(np.uint8)
     labels = np.concatenate((labels, labels2), 0)
-    segments = np.concatenate((segments, segments2), 0)
+    # segments = np.concatenate((segments, segments2), 0)
+    # 替换原有的 segments = np.concatenate((segments, segments2), 0)
+    if len(segments) == 0:
+        segments = segments2
+    elif len(segments2) == 0:
+        pass  # segments保持原样即可
+    else:
+        segments = np.concatenate((segments, segments2), 0)
+
     seg_cls = np.concatenate((seg_cls, seg_cls2), 0)
-    semantic_masks = np.concatenate((semantic_masks, semantic_masks2), 0)
+    # semantic_masks = np.concatenate((semantic_masks, semantic_masks2), 0)  # 替换
+    if len(semantic_masks) == 0:    # 替换
+        semantic_masks = semantic_masks2
+    elif len(semantic_masks2) == 0:
+        pass  # segments保持原样即可
+    else:
+        semantic_masks = np.concatenate((semantic_masks, semantic_masks2), 0)
     return im, labels, segments, seg_cls, semantic_masks
 
 
