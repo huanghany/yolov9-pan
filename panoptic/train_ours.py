@@ -494,7 +494,7 @@ def parse_opt(known=False):
     parser.add_argument('--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
     parser.add_argument('--project', default=ROOT / 'runs/train-pan', help='save to project/name')
 
-    parser.add_argument('--name', default='strawberry_rack_v4', help='save to project/name')  #
+    parser.add_argument('--name', default='strawberry_rack_v4', help='save to project/name')  # 保存路径
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quad', action='store_true', help='quad dataloader')
     parser.add_argument('--cos-lr', action='store_true', help='cosine LR scheduler')
